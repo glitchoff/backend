@@ -184,83 +184,36 @@ app.get("/api/sos/:userId", async (req, res) => {
 app.post("/api/sos/alert", async (req, res) => {
     try {
         const { userId } = req.body;
-        console.log("Received SOS alert request for userId:", userId);
-
-        if (!userId) {
-            console.log("Error: No userId provided in request");
-            return res.status(400).json({ error: "User ID is required" });
-        }
-
-        // Check Fast2SMS configuration
-        if (!process.env.FAST2SMS_API_KEY) {
-            console.error("Missing Fast2SMS API key");
-            return res.status(500).json({ error: "Fast2SMS configuration is incomplete" });
-        }
+        if (!userId) return res.status(400).json({ error: "User ID is required" });
 
         const sosData = await SOS.findOne({ userId });
-        console.log("Found SOS data:", sosData ? "Yes" : "No");
+        if (!sosData) return res.status(404).json({ message: "No emergency contacts found" });
 
-        if (!sosData) {
-            console.log("No emergency contacts found for userId:", userId);
-            return res.status(404).json({ message: "No emergency contacts found" });
-        }
+        console.log(🚨 ALERT! ${sosData.name} triggered SOS! Sending SMS...);
 
-        if (!sosData.emergencyContacts || sosData.emergencyContacts.length === 0) {
-            console.log("No emergency contacts configured for user:", userId);
-            return res.status(400).json({ message: "No emergency contacts configured" });
-        }
+        const messageBody = `🚨 EMERGENCY ALERT! ${sosData.name} needs help! 
+        Blood Group: ${sosData.bloodGroup}, Contact: ${sosData.phone}.`;
 
-        console.log(`🚨 ALERT! ${sosData.name} triggered SOS! Sending SMS...`);
+        // Send SMS to each emergency contact
+        const smsPromises = sosData.emergencyContacts.map((contact) => {
+            return twilioClient.messages
+                .create({
+                    body: messageBody,
+                    from: twilioPhone,
+                    to: contact.phone, 
+                })
+                .then((message) => console.log(✔ SMS sent to ${contact.name} (${contact.phone}): ${message.sid}))
+                .catch((error) => console.error(❌ Error sending SMS to ${contact.name}:, error.message));
+        });
 
-        // Prepare message
-        const emergencyMessage = `🚨 SOS ALERT! ${sosData.name} needs urgent help. Contact: ${sosData.phone}`;
+        await Promise.all(smsPromises); // Wait for all SMS to be sent
 
-        // Extract phone numbers of emergency contacts
-        const phoneNumbers = sosData.emergencyContacts.map(contact => contact.phone).join(",");
-
-        try {
-            // Send SMS using Fast2SMS
-            const response = await axios.post(
-                "https://www.fast2sms.com/dev/bulkV2",
-                {
-                    route: "q",
-                    message: emergencyMessage,
-                    language: "english",
-                    numbers: phoneNumbers,
-                },
-                {
-                    headers: {
-                        authorization: process.env.FAST2SMS_API_KEY,
-                    },
-                }
-            );
-
-            console.log("Fast2SMS Response:", response.data);
-
-            if (response.data.return === true) {
-                res.json({ message: "SOS Alert Sent Successfully!" });
-            } else {
-                throw new Error(response.data.message || "Failed to send SMS");
-            }
-        } catch (smsError) {
-            console.error("Fast2SMS Error:", {
-                message: smsError.message,
-                response: smsError.response?.data
-            });
-            throw smsError;
-        }
+        res.json({ message: "🚨 SOS Alert Sent Successfully!" });
     } catch (error) {
-        console.error("❌ Error processing SOS alert:", {
-            error: error.message,
-            response: error.response?.data
-        });
-        res.status(500).json({
-            error: "Failed to send SOS alert",
-            details: error.message
-        });
+        console.error("❌ Error processing SOS alert:", error);
+        res.status(500).json({ error: "Server error while sending SMS." });
     }
 });
-
 // Medical Advisor Chat
 const SYSTEM_PROMPT = `
 You are MedAI, a professional medical advisor AI.
