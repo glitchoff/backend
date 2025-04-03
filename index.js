@@ -202,8 +202,8 @@ app.post("/api/sos/alert", async (req, res) => {
                     from: twilioPhone,
                     to: contact.phone, 
                 })
-                .then((message) => console.log(✔ SMS sent to ${contact.name} (${contact.phone}): ${message.sid}))
-                .catch((error) => console.error(❌ Error sending SMS to ${contact.name}:, error.message));
+                .then((message) => console.log(`✔ SMS sent to ${contact.name} (${contact.phone}): ${message.sid}`))
+                .catch((error) => console.error(`❌ Error sending SMS to ${contact.name}:`, error.message));
         });
 
         await Promise.all(smsPromises); // Wait for all SMS to be sent
