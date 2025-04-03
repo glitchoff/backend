@@ -6,10 +6,10 @@ require("dotenv").config();
 
 const app = express();
 app.use(express.json());
-app.use(cors({origin:["https://progathon-frontend.vercel.app/"],
-            methods:["POST","GET"],
-              credentials:true
-             }));
+app.use(cors({
+  origin: "https://progathon-frontend.vercel.app",
+  credentials: true
+}));
 
 const twilio = require("twilio");
 
