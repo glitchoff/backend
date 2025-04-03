@@ -189,7 +189,7 @@ app.post("/api/sos/alert", async (req, res) => {
         const sosData = await SOS.findOne({ userId });
         if (!sosData) return res.status(404).json({ message: "No emergency contacts found" });
 
-        console.log(🚨 ALERT! ${sosData.name} triggered SOS! Sending SMS...);
+        console.log(`🚨 ALERT! ${sosData.name} triggered SOS! Sending SMS...`);
 
         const messageBody = `🚨 EMERGENCY ALERT! ${sosData.name} needs help! 
         Blood Group: ${sosData.bloodGroup}, Contact: ${sosData.phone}.`;
